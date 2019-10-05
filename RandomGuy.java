@@ -9,29 +9,6 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Random;
 
-class Node{
-    private int nodeID;
-    private int utility;
-
-    public Node(int id, int util){
-        nodeID = id;
-        utility = util;
-    }
-
-    public void setNodeID(int id){
-        nodeID = id;
-    }
-    public void setNodeUtil(int util){
-        utility = util;
-    }
-    public int getNodeID(){
-        return nodeID;
-    }
-    public int getNodeUtil(){
-        return utility;
-    }
-}
-
 class RandomGuy {
 
     private BufferedReader sin;
@@ -71,145 +48,111 @@ class RandomGuy {
         int myMove;
 
         while (true) {
-//			System.out.println("Read");
             readMessage();
 
             if (turn == me) {
-//				System.out.println("Move");
                 validMoves = getValidMoves(round, state, me);
-
                 myMove = move();
-
                 String sel = validMoves[myMove] / 8 + "\n" + validMoves[myMove] % 8;
-                System.out.println("Determined that the best move is at square: " + validMoves[myMove]);
-//                String sel = myMove / 8 + "\n" + myMove % 8;
-
-//				System.out.println("Selection: " + validMoves[myMove] / 8 + ", " + validMoves[myMove] % 8);
-
                 sout.println(sel);
             }
         }
     }
 
     private int move() {
-        int[] moves = getValidMoves(round, state, me);
-        int res = findBestMove(true, moves, 0, state, round, Integer.MIN_VALUE, Integer.MAX_VALUE, validMoves[0]).getNodeID();
-        //int actualValue = this.generator.nextInt(this.numValidMoves);
-
-        System.out.println("res before return: " + res);
-        return res;
-//		int index = Arrays.binarySearch(moves, res);
-
-//		if (round < 4) {
-
-//		}
-//		else {
-//			int[] moves = getValidMoves(round, state);
-//			int res = minimax( 0, true, moves);
-//			int index = Arrays.binarySearch(moves, res);
-//			return (index < 0) ? -1 : index;
-//		}
+        if (round < 4) {
+            return this.generator.nextInt(this.numValidMoves);
+        } else {
+            return findBestMove(true, getValidMoves(round, state, me), getValidMoves(round, state, them), 0, state, round, Integer.MIN_VALUE, Integer.MAX_VALUE, validMoves[0]);
+        }
     }
 
-    private Node findBestMove(boolean isMax, int[] validMoves, int curRecursionLevel, int[][] currentState, int curRound, int alpha, int beta, int potentialMove) {
+    private int findBestMove(boolean isMax, int[] validMoves, int[] otherPlayersValidMoves, int curRecursionLevel, int[][] currentState, int curRound, int alpha, int beta, int potentialMove) {
         // Check if we are at the end of the tree or at our max recursion level.
         curRecursionLevel += 1;
-        String tabs = "";
-        for(int j = 0; j < curRecursionLevel; j++){
-            tabs = tabs + "\t|";
-        }
-        System.out.println(tabs + "Starting new recursion:");
-        System.out.println(tabs + "curRecursionLevel: " + curRecursionLevel);
+//		System.out.println("recursion level: " + curRecursionLevel + "current nodes: " + validMoves[0] + " : " + validMoves[1] + " : " + validMoves[2]);
+//		String tabs = "";
+//		for(int j = 0; j < curRecursionLevel; j++){
+//			tabs = tabs + "\t|";
+//		}
+//		System.out.println(tabs + "Starting new recursion:");
+//		System.out.println(tabs + "curRecursionLevel: " + curRecursionLevel);
 
-        if ((getNumValidMoves(validMoves) == 0) || curRecursionLevel == 21) {
-            int util = determineStateUtility(currentState, potentialMove, validMoves);
-            System.out.println(tabs + "Arrived at a leaf node. returning utility of: " + util);
-            Node returnVal = new Node(-1, util);
-            return returnVal;
+        if ((getNumValidMoves(validMoves) == 0) || curRecursionLevel == 10) {
+            //			System.out.println(tabs + "Arrived at a leaf node. returning utility of: " + util);
+            return determineStateUtility(currentState, potentialMove, validMoves, otherPlayersValidMoves);
         }
         if (isMax) {
             // The first item in the pair is the index and the second item is the utility.
-//            Pair<Integer, Integer> value = new Pair<>(-1, Integer.MIN_VALUE);
-            Node value = new Node(-1, Integer.MIN_VALUE);
-            System.out.println(tabs + "It's randomGuy's turn. Looping through possible valid moves:");
-            int numMoves = getNumValidMoves(validMoves);
-            for(int k = 0; k < numMoves; k++){
-                System.out.println(tabs + validMoves[k]);
-            }
-            for (int i = 0; i < validMoves.length; i++) {
-                if (i >= getNumValidMoves(validMoves)) {
-                    System.out.println(tabs + "Finished exploring randomGuy's moves for this level, breaking out of for-loop");
-                    break;
-                }
-                System.out.println(tabs + "Exploring randmonGuy's move at: " + validMoves[i]);
+            Pair<Integer, Integer> value = new Pair<>(-1, Integer.MIN_VALUE);
+//			System.out.println(tabs + "It's randomGuy's turn. Looping through possible valid moves:");
+//			int numMoves = getNumValidMoves(validMoves);
+//			for(int k = 0; k < numMoves; k++) {
+//				System.out.println(tabs + validMoves[k]);
+//			}
+            for (int i = 0; i < getNumValidMoves(validMoves); i++) {
+//				System.out.println(tabs + "Exploring randmonGuy's move at: " + validMoves[i]);
                 currentState[validMoves[i] / 8][validMoves[i] % 8] = me;
-                System.out.println(tabs + "Making another recursive call.");
-                Node tempValue = findBestMove(false, getValidMoves(curRound + 1, currentState, them), curRecursionLevel, currentState, curRound + 1, alpha, beta, validMoves[i]);
-                tempValue.setNodeID(i);
-                System.out.println(tabs + "Recursion returned. Move " + validMoves[i] + " has a utility of " + tempValue.getNodeUtil());
-//                System.out.println(tabs + "^^^PROBLEM! We return the *index* not the utility. So move " + validMoves[i] + " gets assigned the index of the best move and not the returned utility. So we can't compare it with the 'value' variable");
-                if(tempValue.getNodeUtil() > value.getNodeUtil()){
+//				System.out.println(tabs + "Making another recursive call.");
+                Pair<Integer, Integer> tempValue = new Pair<>(i, findBestMove(false, getValidMoves(curRound + 1, currentState, them), getValidMoves(curRound + 1, currentState, me), curRecursionLevel, currentState, curRound + 1, alpha, beta, validMoves[i]));
+                currentState[validMoves[i] / 8][validMoves[i] % 8] = 0;
+//				System.out.println(tabs + "Recursion returned. Move " + validMoves[i] + " has a utility of " + tempValue.getValue());
+//				System.out.println(tabs + "^^^PROBLEM! We return the *index* not the utility. So move " + validMoves[i] + " gets assigned the index of the best move and not the returned utility. So we can't compare it with the 'value' variable");
+                if (tempValue.getValue() > value.getValue()) {
                     value = tempValue;
                 }
-                alpha = Math.max(alpha, value.getNodeUtil());
+                alpha = Math.max(alpha, value.getValue());
                 if (alpha >= beta) {
-                    System.out.println(tabs + "Future branches deemed obsolete through pruning. Break called to stop exploring them");
-                    //TODO: which branches does this prevent exploration of?
+//					System.out.println(tabs + "Future branches deemed obsolete (through alpha-beta pruning). Break called to stop exploring them");
                     break;
                 }
             }
-            System.out.println(tabs + "After the alpha-beta pruning, returning utility of: " + value.getNodeUtil() + " associated with square: " + validMoves[value.getNodeID()]);
+//			System.out.println(tabs + "After the alpha-beta pruning, returning utility of: " + value.getValue() + " associated with square: " + validMoves[value.getKey()]);
 
-            return value;
+            return value.getKey();
         } else {
             // The first item in the pair is the index and the second item is the utility.
-            System.out.println(tabs + "It's human's turn. Looping through possible valid moves:");
+//			System.out.println(tabs + "It's human's turn. Looping through possible valid moves:");
             int numMoves = getNumValidMoves(validMoves);
-            for(int k = 0; k < numMoves; k++){
-                System.out.println(tabs + validMoves[k]);
+            for (int k = 0; k < numMoves; k++) {
+//				System.out.println(tabs + validMoves[k]);
             }
             getValidMoves(round, currentState, them);
-            Node value = new Node(-1, Integer.MAX_VALUE);
-            for (int i = 0; i < validMoves.length; i++) {
-                if (i >= getNumValidMoves(validMoves)) {
-                    System.out.println(tabs + "Finished exploring human's moves for this level, breaking out of for-loop");
-                    //if there are no valid moves, break out of the loop
-                    break;
-                }
-                System.out.println(tabs + "Exploring human's move at: " + validMoves[i]);
+            Pair<Integer, Integer> value = new Pair<>(-1, Integer.MAX_VALUE);
+            for (int i = 0; i < getNumValidMoves(validMoves); i++) {
+//				System.out.println(tabs + "Exploring human's move at: " + validMoves[i]);
                 currentState[validMoves[i] / 8][validMoves[i] % 8] = them;
-                System.out.println(tabs + "Making another recursive call.");
-                Node tempValue = findBestMove(true, getValidMoves(curRound + 1, currentState, me), curRecursionLevel, currentState, curRound + 1, alpha, beta, validMoves[i]);
-                tempValue.setNodeID(i);
-                System.out.println(tabs + "Recursion returned. Move " + validMoves[i] + " has a utility of " + tempValue.getNodeUtil());
-//                System.out.println(tabs + "^^^PROBLEM! We return the *index* not the utility. So move " + validMoves[i] + " gets assigned the index of the best move and not the returned utility. So we can't compare it with the 'value' variable");
-                if(tempValue.getNodeUtil() < value.getNodeUtil()){
+//				System.out.println(tabs + "Making another recursive call.");
+                Pair<Integer, Integer> tempValue = new Pair<>(i, findBestMove(true, getValidMoves(curRound + 1, currentState, me), getValidMoves(curRound + 1, currentState, them), curRecursionLevel, currentState, curRound + 1, alpha, beta, validMoves[i]));
+                currentState[validMoves[i] / 8][validMoves[i] % 8] = 0;
+//				System.out.println(tabs + "Recursion returned. Move " + validMoves[i] + " has a utility of " + tempValue.getValue());
+//				System.out.println(tabs + "^^^PROBLEM! We return the *index* not the utility. So move " + validMoves[i] + " gets assigned the index of the best move and not the returned utility. So we can't compare it with the 'value' variable");
+                if (tempValue.getValue() < value.getValue()) {
                     value = tempValue;
                 }
-                beta = Math.min(beta, value.getNodeUtil());
+                beta = Math.min(beta, value.getValue());
                 if (alpha >= beta) {
-                    System.out.println(tabs + "Future branches deemed obsolete through pruning. Break called to stop exploring them");
+//					System.out.println(tabs + "Future branches deemed obsolete (through alpha-beta pruning). Break called to stop exploring them");
                     break;
                 }
             }
-            System.out.println(tabs + "After the alpha-beta pruning, returning utility of: " + value.getNodeUtil() + " associated with square: " + validMoves[value.getNodeID()]);
-            return value;
+//			System.out.println(tabs + "After the alpha-beta pruning, returning utility of: " + value.getValue() + " associated with square: " + validMoves[value.getKey()]);
+            return value.getKey();
         }
     }
 
-    private int determineStateUtility(int[][] currState, int potentialMove, int [] validMoves) {
-        int numNonZeros = getNumValidMoves(validMoves);
-//        return 42;
-        return (numNonZeros * 40) + boardValues[potentialMove/8][potentialMove%8];
+    private int determineStateUtility(int[][] currState, int potentialMove, int[] validMoves, int[] otherPlayerValidMoves) {
+        int numNonZerosPlayer = getNumValidMoves(validMoves);
+        int numZerosOtherPlayer = otherPlayerValidMoves.length - getNumValidMoves(otherPlayerValidMoves);
+        return (numNonZerosPlayer) + (numZerosOtherPlayer) ;//+ boardValues[potentialMove / 8][potentialMove % 8];
     }
 
-    private int getNumValidMoves(int[] validMoves){
+    private int getNumValidMoves(int[] validMoves) {
         int countValidMoves;
         // first check if the number of valid moves is 0:
-        if(validMoves[0] == 0 && validMoves[1] == 0) {
+        if (validMoves[0] == 0 && validMoves[1] == 0) {
             return 0;
-        }
-        else {
+        } else {
             //if it gets here, we know there's at least one valid move in index 0
             countValidMoves = 1;
             //loop through the list to count the number of non-zero items
@@ -218,9 +161,6 @@ class RandomGuy {
             for (int i = 1; i < len; i++) {
                 if (validMoves[i] != 0) {
                     countValidMoves++;
-                } else {
-                    //as soon as we reach a 0 we break out
-                    break;
                 }
             }
         }
